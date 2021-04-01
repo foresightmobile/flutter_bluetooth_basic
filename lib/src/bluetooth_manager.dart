@@ -39,11 +39,12 @@ class BluetoothManager {
   Future<bool> get isConnected async =>
       await _channel.invokeMethod('isConnected');
 
-  BehaviorSubject<bool> _isScanning = BehaviorSubject.seeded(false);
+  BehaviorSubject<bool> _isScanning = BehaviorSubject<bool>();
   Stream<bool> get isScanning => _isScanning.stream;
 
   BehaviorSubject<List<BluetoothDevice>> _scanResults =
-      BehaviorSubject.seeded([]);
+      BehaviorSubject<List<BluetoothDevice>>();
+
   Stream<List<BluetoothDevice>> get scanResults => _scanResults.stream;
 
   PublishSubject _stopScanPill = new PublishSubject();
@@ -57,9 +58,10 @@ class BluetoothManager {
 
   /// Starts a scan for Bluetooth Low Energy devices
   /// Timeout closes the stream after a specified [Duration]
-  Stream<BluetoothDevice> scan({
+  Future scan({
     Duration timeout,
-  }) async* {
+  }) async {
+    // _scanResults.add(<BluetoothDevice>[]);
     if (_isScanning.value == true) {
       throw Exception('Another scan is already in progress.');
     }
@@ -85,35 +87,34 @@ class BluetoothManager {
       throw e;
     }
 
-    yield* BluetoothManager.instance._methodStream
+    BluetoothManager.instance._methodStream
         .where((m) => m.method == "ScanResult")
         .map((m) => m.arguments)
         .takeUntil(Rx.merge(killStreams))
         .doOnDone(stopScan)
-        .map((map) {
+        .listen((map) async {
+      print('New Device Detected: $map');
       final device = BluetoothDevice.fromJson(Map<String, dynamic>.from(map));
-      final List<BluetoothDevice> list = _scanResults.value;
-      int newIndex = -1;
-      list.asMap().forEach((index, e) {
-        if (e.address == device.address) {
-          newIndex = index;
-        }
-      });
 
-      if (newIndex != -1) {
-        list[newIndex] = device;
+      final list = _scanResults.value ?? [];
+      final itemQuery = list.singleWhere(
+        (e) => e.address == device.address,
+        orElse: () => null,
+      );
+      if (itemQuery != null) {
+        list.remove(itemQuery);
+        list.add(itemQuery);
       } else {
         list.add(device);
       }
       _scanResults.add(list);
-      return device;
     });
   }
 
   Future startScan({
     Duration timeout,
   }) async {
-    await scan(timeout: timeout).drain();
+    await scan(timeout: timeout);
     return _scanResults.value;
   }
 
