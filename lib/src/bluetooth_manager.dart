@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:flutter_bluetooth_basic/flutter_bluetooth_basic.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'bluetooth_device.dart';
@@ -50,10 +51,15 @@ class BluetoothManager {
   PublishSubject _stopScanPill = new PublishSubject();
 
   /// Gets the current state of the Bluetooth module
-  Stream<int> get state async* {
-    yield await _channel.invokeMethod('state').then((s) => s);
+  Stream<BluetoothConnectionState> get state async* {
+    yield await _channel.invokeMethod('state').then((s) {
+      return bluetoothConnectionStateFromInt(s);
+    });
 
-    yield* _stateChannel.receiveBroadcastStream().map((s) => s);
+    yield* _stateChannel.receiveBroadcastStream().map((s) {
+      if (s is BluetoothConnectionState) return s;
+      return bluetoothConnectionStateFromInt(s);
+    });
   }
 
   /// Starts a scan for Bluetooth Low Energy devices
@@ -81,7 +87,7 @@ class BluetoothManager {
     try {
       await _channel.invokeMethod('startScan');
     } catch (e) {
-      print('Error starting scan.');
+      print('Error starting scan. $e');
       _stopScanPill.add(null);
       _isScanning.add(false);
       throw e;

@@ -34,9 +34,11 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.Vector;
 
 import static androidx.core.app.ActivityCompat.startActivityForResult;
@@ -53,7 +55,9 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
     private static final int REQUEST_ENABLE_BLUETOOTH = 12;
     private static final String NAMESPACE = "flutter_bluetooth_basic";
     private Boolean isReceiverRegistered = false;
-    private Boolean isSubmittedResultStatusConnect = false;
+    private Boolean isBluetoothConnected = false;
+    private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final String NAME = "BTPrinter";
 
     private Activity activity;
     private Context context;
@@ -102,8 +106,7 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
                 result.success(mBluetoothAdapter.isEnabled());
                 break;
             case "isConnected":
-                result.success(mBluetoothAdapter.getState() != BluetoothAdapter.STATE_ON ||
-                        mBluetoothAdapter.getState() != BluetoothAdapter.STATE_TURNING_ON);
+                result.success(threadPool != null);
                 break;
             case "startScan": {
                 pendingCall = call;
@@ -155,7 +158,6 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
                 result.success(true);
                 break;
             case "connect":
-                isSubmittedResultStatusConnect = false;
                 connect(result, args);
                 break;
             case "disconnect":
@@ -176,23 +178,7 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
 
     private void state(Result result) {
         try {
-            switch (mBluetoothAdapter.getState()) {
-                case BluetoothAdapter.STATE_OFF:
-                    result.success(BluetoothAdapter.STATE_OFF);
-                    break;
-                case BluetoothAdapter.STATE_ON:
-                    result.success(BluetoothAdapter.STATE_ON);
-                    break;
-                case BluetoothAdapter.STATE_TURNING_OFF:
-                    result.success(BluetoothAdapter.STATE_TURNING_OFF);
-                    break;
-                case BluetoothAdapter.STATE_TURNING_ON:
-                    result.success(BluetoothAdapter.STATE_TURNING_ON);
-                    break;
-                default:
-                    result.success(0);
-                    break;
-            }
+            result.success(mBluetoothAdapter.getState());
         } catch (SecurityException e) {
             result.error("invalid_argument", "Argument 'address' not found", null);
         }
@@ -249,13 +235,18 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
         if (this.mBluetoothAdapter.isDiscovering()) {
             mBluetoothAdapter.cancelDiscovery();
         }
-        mBluetoothAdapter.startDiscovery();
-        this.context.registerReceiver(this.mScanReceiver, new IntentFilter(BluetoothDevice.ACTION_FOUND));
-        this.context.registerReceiver(this.mScanReceiver, new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED));
+        try {
+            mBluetoothAdapter.listenUsingInsecureRfcommWithServiceRecord(NAME, MY_UUID);
+            mBluetoothAdapter.startDiscovery();
+            context.registerReceiver(mScanReceiver, new IntentFilter(BluetoothDevice.ACTION_FOUND));
+            context.registerReceiver(mScanReceiver, new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void stopScan() {
-        if (isReceiverRegistered == true) {
+        if (isReceiverRegistered) {
             context.unregisterReceiver(this.mScanReceiver);
             this.isReceiverRegistered = false;
         }
@@ -275,10 +266,7 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
                 BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
                 if (device == null) {
                     Log.e(TAG, "Printer Device Is Unknown");
-                    if (isSubmittedResultStatusConnect != true && result != null) {
-                        result.error("connection_error", "Device not found", null);
-                    }
-                    isSubmittedResultStatusConnect = true;
+                    result.error("connection_error", "Device not found", null);
                     return;
                 }
                 boolean isConnectSameDevice = mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT).contains(device);
@@ -320,19 +308,11 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
                 result.success(true);
             } else {
                 Log.e(TAG, "Argument 'address' not found");
-                if (isSubmittedResultStatusConnect != true && result != null) {
-                    result.error("connection_error", "Argument 'address' not found", null);
-                }
-                isSubmittedResultStatusConnect = true;
-
+                result.error("connection_error", "Argument 'address' not found", null);
             }
         } catch (Exception e) {
             Log.e(TAG, "Failure connect to device");
-            if (isSubmittedResultStatusConnect != true && result != null) {
-                result.error("connection_error", "Failure connect to device " + e.toString(), null);
-            }
-            isSubmittedResultStatusConnect = true;
-
+            result.error("connection_error", "Failure connect to device " + e.toString(), null);
         }
     }
 
@@ -388,12 +368,12 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
     public boolean onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == REQUEST_COARSE_LOCATION_PERMISSIONS) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-                if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.Q){
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     Log.i(TAG, "RESULT ON Request Permission in Android Q");
-                    if(grantResults[2] == PackageManager.PERMISSION_GRANTED){
+                    if (grantResults[2] == PackageManager.PERMISSION_GRANTED) {
                         startScan(pendingCall, pendingResult);
                     }
-                }else{
+                } else {
                     startScan(pendingCall, pendingResult);
                 }
             } else {
@@ -418,11 +398,16 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
                 if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
                     threadPool = null;
                     sink.success(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1));
+                    isBluetoothConnected = false;
                 } else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                    isBluetoothConnected = true;
                     sink.success(1);
                 } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+                    isBluetoothConnected = false;
                     threadPool = null;
                     sink.success(0);
+                } else {
+                    isBluetoothConnected = false;
                 }
             }
         };
