@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bluetooth_basic/flutter_bluetooth_basic.dart';
 import 'package:rxdart/rxdart.dart';
@@ -21,9 +22,8 @@ class BluetoothManager {
       StreamController.broadcast();
 
   BluetoothManager._() {
-    _channel.setMethodCallHandler((MethodCall call) {
+    _channel.setMethodCallHandler((MethodCall call) async {
       _methodStreamController.add(call);
-      return;
     });
   }
 
@@ -65,7 +65,7 @@ class BluetoothManager {
   /// Starts a scan for Bluetooth Low Energy devices
   /// Timeout closes the stream after a specified [Duration]
   Future scan({
-    Duration timeout,
+    Duration? timeout,
   }) async {
     // _scanResults.add(<BluetoothDevice>[]);
     if (_isScanning.value == true) {
@@ -103,10 +103,8 @@ class BluetoothManager {
       final device = BluetoothDevice.fromJson(Map<String, dynamic>.from(map));
 
       final list = _scanResults.value ?? [];
-      final itemQuery = list.singleWhere(
-        (e) => e.address == device.address,
-        orElse: () => null,
-      );
+      final itemQuery =
+          list.singleWhereOrNull((e) => e.address == device.address);
       if (itemQuery != null) {
         list.remove(itemQuery);
         list.add(itemQuery);
@@ -118,7 +116,7 @@ class BluetoothManager {
   }
 
   Future startScan({
-    Duration timeout,
+    Duration? timeout,
   }) async {
     await scan(timeout: timeout);
     return _scanResults.value;

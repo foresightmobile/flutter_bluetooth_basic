@@ -52,13 +52,13 @@ class _MyHomePageState extends State<MyHomePage> {
       print('cur device status: $state');
 
       switch (state) {
-        case BluetoothManager.CONNECTED:
+        case BluetoothConnectionState.connected:
           setState(() {
             _connected = true;
             tips = 'connect success';
           });
           break;
-        case BluetoothManager.DISCONNECTED:
+        case BluetoothConnectionState.disconnected:
           setState(() {
             _connected = false;
             tips = 'disconnect success';

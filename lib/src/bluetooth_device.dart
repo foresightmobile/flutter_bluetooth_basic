@@ -4,12 +4,13 @@ part 'bluetooth_device.g.dart';
 
 @JsonSerializable(includeIfNull: false)
 class BluetoothDevice {
-  BluetoothDevice();
+  BluetoothDevice(
+      {required this.name, required this.address, this.type, this.connected});
 
-  String name;
-  String address;
-  int type = 0;
-  bool connected = false;
+  final String name;
+  final String address;
+  int? type = 0;
+  bool? connected = false;
 
   factory BluetoothDevice.fromJson(Map<String, dynamic> json) =>
       _$BluetoothDeviceFromJson(json);

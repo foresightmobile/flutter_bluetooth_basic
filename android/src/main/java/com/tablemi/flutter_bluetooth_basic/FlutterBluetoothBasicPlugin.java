@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -434,9 +435,9 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_ENABLE_BLUETOOTH) {
             Log.d(TAG, "RESULT REQUEST ENABLE BLUETOOTH, 'RESULT_CODE': " + resultCode);
-            if (mBluetoothAdapter.isEnabled()) {
+//            if (mBluetoothAdapter.isEnabled()) {
                 startScan();
-            }
+//            }
         }
         return false;
     }

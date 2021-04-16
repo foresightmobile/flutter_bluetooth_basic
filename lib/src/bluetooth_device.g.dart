@@ -7,15 +7,19 @@ part of 'bluetooth_device.dart';
 // **************************************************************************
 
 BluetoothDevice _$BluetoothDeviceFromJson(Map<String, dynamic> json) {
-  return BluetoothDevice()
-    ..name = json['name'] as String
-    ..address = json['address'] as String
-    ..type = json['type'] as int
-    ..connected = json['connected'] as bool;
+  return BluetoothDevice(
+    name: json['name'] as String,
+    address: json['address'] as String,
+    type: json['type'] as int?,
+    connected: json['connected'] as bool?,
+  );
 }
 
 Map<String, dynamic> _$BluetoothDeviceToJson(BluetoothDevice instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'name': instance.name,
+    'address': instance.address,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -23,8 +27,6 @@ Map<String, dynamic> _$BluetoothDeviceToJson(BluetoothDevice instance) {
     }
   }
 
-  writeNotNull('name', instance.name);
-  writeNotNull('address', instance.address);
   writeNotNull('type', instance.type);
   writeNotNull('connected', instance.connected);
   return val;
