@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 // import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -51,13 +52,13 @@ class _MyHomePageState extends State<MyHomePage> {
       print('cur device status: $state');
 
       switch (state) {
-        case BluetoothManager.CONNECTED:
+        case BluetoothConnectionState.connected:
           setState(() {
             _connected = true;
             tips = 'connect success';
           });
           break;
-        case BluetoothManager.DISCONNECTED:
+        case BluetoothConnectionState.disconnected:
           setState(() {
             _connected = false;
             tips = 'disconnect success';
@@ -157,18 +158,18 @@ class _MyHomePageState extends State<MyHomePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        OutlineButton(
+                        OutlinedButton(
                           child: Text('connect'),
                           onPressed: _connected ? null : _onConnect,
                         ),
                         SizedBox(width: 10.0),
-                        OutlineButton(
+                        OutlinedButton(
                           child: Text('disconnect'),
                           onPressed: _connected ? _onDisconnect : null,
                         ),
                       ],
                     ),
-                    OutlineButton(
+                    OutlinedButton(
                       child: Text('Send test data'),
                       onPressed: _connected ? _sendData : null,
                     ),
