@@ -68,7 +68,7 @@ class BluetoothManager {
     Duration? timeout,
   }) async {
     // _scanResults.add(<BluetoothDevice>[]);
-    if (_isScanning.value == true) {
+    if (_isScanning.hasValue ? _isScanning.value == true : false) {
       throw Exception('Another scan is already in progress.');
     }
 
@@ -102,7 +102,7 @@ class BluetoothManager {
       print('New Device Detected: $map');
       final device = BluetoothDevice.fromJson(Map<String, dynamic>.from(map));
 
-      final list = _scanResults.value ?? [];
+      final list = _scanResults.hasValue ? _scanResults.value ?? <BluetoothDevice>[] : <BluetoothDevice>[];
       final itemQuery =
           list.singleWhereOrNull((e) => e.address == device.address);
       if (itemQuery != null) {
@@ -119,7 +119,7 @@ class BluetoothManager {
     Duration? timeout,
   }) async {
     await scan(timeout: timeout);
-    return _scanResults.value;
+    return _scanResults.hasValue ? _scanResults.value ?? [] : [];
   }
 
   /// Stops a scan for Bluetooth Low Energy devices
